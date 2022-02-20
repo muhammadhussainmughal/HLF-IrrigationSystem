@@ -1,0 +1,208 @@
+package main
+
+import (
+  "encoding/json"
+  "fmt"
+  "log"
+  "time"
+
+  "github.com/hyperledger/fabric-contract-api-go/contractapi"
+)
+
+// SmartContract provides StreamflowReading functions for managing an StreamflowReading
+   type SmartContract struct {
+      contractapi.Contract
+    }
+  
+
+// StreamflowReading describes essential data of streamflow reading through any data acquistion techniques discussed in literature  
+   type StreamflowReading struct {
+      StreamflowReadingID             string `json:"StreamflowReadingID"`
+      WaterwayName          string `json:"WaterwayName"`
+      GuagingLocation           string    `json:"GuagingLocation"`
+      Inflow          int `json:"Inflow"`
+      outflow int    `json:"outflow"`
+      GaugingTimeStampe string    `json:"GaugingTimeStampe"`
+    }
+
+// InitLedger adds a base set of StreamflowReadings to the ledger
+   func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
+    StreamflowReadings := []StreamflowReading{
+      {StreamflowReadingID: "StreamflowReading1", WaterwayName: "IndusRiver", GuagingLocation: "GudduBarrage", Inflow: 71658, outflow: 60114,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading2", WaterwayName: "IndusRiver", GuagingLocation: "SukkurBarrage", Inflow: 54140, outflow: 22040,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading3", WaterwayName: "IndusRiver", GuagingLocation: "KotriBarrage", Inflow: 10901, outflow: 200,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading4", WaterwayName: "RiceCanal", GuagingLocation: "SukkurBarrage", Inflow: 3700, outflow: 3700,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading5", WaterwayName: "NWC", GuagingLocation: "SukkurBarrage", Inflow: 2100, outflow: 2100,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading6", WaterwayName: "DaduCanal", GuagingLocation: "SukkurBarrage", Inflow: 2380, outflow: 2380,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading1", WaterwayName: "NaraCanal", GuagingLocation: "SukkurBarrage", Inflow:10550, outflow: 10550,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading2", WaterwayName: "RohriCanal", GuagingLocation: "SukkurBarrage", Inflow: 10550, outflow: 10550,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading3", WaterwayName: "KhairpurEast", GuagingLocation: "SukkurBarrage", Inflow: 1540, outflow: 1540,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading4", WaterwayName: "KhairpurWest", GuagingLocation: "SukkurBarrage", Inflow: 2100, outflow: 2100,"06-01-2021"},
+      {StreamflowReadingID: "StreamflowReading5", WaterwayName: "NWC", GuagingLocation: "SukkurBarrage", Inflow: 1280, outflow: 1280,"06-01-2021"},
+            {StreamflowReadingID: "StreamflowReading6", WaterwayName: "KalriBagarFeeder", GuagingLocation: "KotriBarrage", Inflow: 3800, outflow: 3800,"06-01-2021"
+      {StreamflowReadingID: "StreamflowReading6", WaterwayName: "Pinyari", GuagingLocation: "KotriBarrage", Inflow: 1850, outflow: 1850,"06-01-2021"},
+      
+    }
+
+    for _, StreamflowReading := range StreamflowReadings {
+      StreamflowReadingJSON, err := json.Marshal(StreamflowReading)
+      if err != nil {
+        return err
+      }
+
+      err = ctx.GetStub().PutState(StreamflowReading.StreamflowReadingID, StreamflowReadingJSON)
+      if err != nil {
+        return fmt.Errorf("failed to put to world state. %v", err)
+      }
+    }
+
+    return nil
+  }
+
+// CreateStreamflowReading issues a new StreamflowReading to the world state with given details.
+   func (s *SmartContract) CreateStreamflowReading(ctx contractapi.TransactionContextInterface, StreamflowReadingID string, WaterwayName string, GuagingLocation int, Inflow string, outflow int) error {
+    exists, err := s.StreamflowReadingExists(ctx, StreamflowReadingID)
+    if err != nil {
+      return err
+    }
+    if exists {
+      return fmt.Errorf("the StreamflowReading %s already exists", StreamflowReadingID)
+    }
+
+    StreamflowReading := StreamflowReading{
+      StreamflowReadingID:             StreamflowReadingID,
+      WaterwayName:          WaterwayName,
+      GuagingLocation:           GuagingLocation,
+      Inflow:          Inflow,
+      outflow: outflow,
+    }
+    StreamflowReadingJSON, err := json.Marshal(StreamflowReading)
+    if err != nil {
+      return err
+    }
+
+    return ctx.GetStub().PutState(StreamflowReadingID, StreamflowReadingJSON)
+  }
+
+// ReadStreamflowReading returns the StreamflowReading stored in the world state with given StreamflowReadingID.
+   func (s *SmartContract) ReadStreamflowReading(ctx contractapi.TransactionContextInterface, StreamflowReadingID string) (*StreamflowReading, error) {
+    StreamflowReadingJSON, err := ctx.GetStub().GetState(StreamflowReadingID)
+    if err != nil {
+      return nil, fmt.Errorf("failed to read from world state: %v", err)
+    }
+    if StreamflowReadingJSON == nil {
+      return nil, fmt.Errorf("the StreamflowReading %s does not exist", StreamflowReadingID)
+    }
+
+    var StreamflowReading StreamflowReading
+    err = json.Unmarshal(StreamflowReadingJSON, &StreamflowReading)
+    if err != nil {
+      return nil, err
+    }
+
+    return &StreamflowReading, nil
+  }
+
+// UpdateStreamflowReading updates an existing StreamflowReading in the world state with provStreamflowReadingIDed parameters.
+   func (s *SmartContract) UpdateStreamflowReading(ctx contractapi.TransactionContextInterface, StreamflowReadingID string, WaterwayName string, GuagingLocation int, Inflow string, outflow int) error {
+    exists, err := s.StreamflowReadingExists(ctx, StreamflowReadingID)
+    if err != nil {
+      return err
+    }
+    if !exists {
+      return fmt.Errorf("the StreamflowReading %s does not exist", StreamflowReadingID)
+    }
+
+    // overwriting original StreamflowReading with new StreamflowReading
+    StreamflowReading := StreamflowReading{
+      StreamflowReadingID:             StreamflowReadingID,
+      WaterwayName:          WaterwayName,
+      GuagingLocation:           GuagingLocation,
+      Inflow:          Inflow,
+      outflow: outflow,
+    }
+    StreamflowReadingJSON, err := json.Marshal(StreamflowReading)
+    if err != nil {
+      return err
+    }
+
+    return ctx.GetStub().PutState(StreamflowReadingID, StreamflowReadingJSON)
+  }
+
+  // DeleteStreamflowReading deletes an given StreamflowReading from the world state.
+  func (s *SmartContract) DeleteStreamflowReading(ctx contractapi.TransactionContextInterface, StreamflowReadingID string) error {
+    exists, err := s.StreamflowReadingExists(ctx, StreamflowReadingID)
+    if err != nil {
+      return err
+    }
+    if !exists {
+      return fmt.Errorf("the StreamflowReading %s does not exist", StreamflowReadingID)
+    }
+
+    return ctx.GetStub().DelState(StreamflowReadingID)
+  }
+
+// StreamflowReadingExists returns true when StreamflowReading with given StreamflowReadingID exists in world state
+   func (s *SmartContract) StreamflowReadingExists(ctx contractapi.TransactionContextInterface, StreamflowReadingID string) (bool, error) {
+    StreamflowReadingJSON, err := ctx.GetStub().GetState(StreamflowReadingID)
+    if err != nil {
+      return false, fmt.Errorf("failed to read from world state: %v", err)
+    }
+
+    return StreamflowReadingJSON != nil, nil
+  }
+
+// TransferStreamflowReading updates the Inflow field of StreamflowReading with given StreamflowReadingID in world state.
+   func (s *SmartContract) TransferStreamflowReading(ctx contractapi.TransactionContextInterface, StreamflowReadingID string, newInflow string) error {
+    StreamflowReading, err := s.ReadStreamflowReading(ctx, StreamflowReadingID)
+    if err != nil {
+      return err
+    }
+
+    StreamflowReading.Inflow = newInflow
+    StreamflowReadingJSON, err := json.Marshal(StreamflowReading)
+    if err != nil {
+      return err
+    }
+
+    return ctx.GetStub().PutState(StreamflowReadingID, StreamflowReadingJSON)
+  }
+
+// GetAllStreamflowReadings returns all StreamflowReadings found in world state
+   func (s *SmartContract) GetAllStreamflowReadings(ctx contractapi.TransactionContextInterface) ([]*StreamflowReading, error) {
+// range query with empty string for startKey and endKey does an
+// open-ended query of all StreamflowReadings in the chaincode namespace.
+    resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+    if err != nil {
+      return nil, err
+    }
+    defer resultsIterator.Close()
+
+    var StreamflowReadings []*StreamflowReading
+    for resultsIterator.HasNext() {
+      queryResponse, err := resultsIterator.Next()
+      if err != nil {
+        return nil, err
+      }
+
+      var StreamflowReading StreamflowReading
+      err = json.Unmarshal(queryResponse.Value, &StreamflowReading)
+      if err != nil {
+        return nil, err
+      }
+      StreamflowReadings = append(StreamflowReadings, &StreamflowReading)
+    }
+
+    return StreamflowReadings, nil
+  }
+
+  func main() {
+    StreamflowReadingChaincode, err := contractapi.NewChaincode(&SmartContract{})
+    if err != nil {
+      log.Panicf("Error creating StreamflowReading-Storage chaincode: %v", err)
+    }
+
+    if err := StreamflowReadingChaincode.Start(); err != nil {
+      log.Panicf("Error starting StreamflowReading-Storage chaincode: %v", err)
+    }
+  }
